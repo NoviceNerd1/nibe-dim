@@ -1,0 +1,24 @@
+{
+  "name": "nibe-dim",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/backend/services/*",
+    "packages/backend/shared",
+    "packages/frontend/*"
+  ],
+  "scripts": {
+    "start:backend": "concurrently -n alert,analytics,audit,control,data,device,gateway,user,websocket,workflow \"cd packages/backend/services/alert-service && node dist/app.js\" \"cd packages/backend/services/analytics-service && node dist/app.js\" \"cd packages/backend/services/audit-service && node dist/app.js\" \"cd packages/backend/services/control-service && node dist/app.js\" \"cd packages/backend/services/data-service && node dist/app.js\" \"cd packages/backend/services/device-service && node dist/app.js\" \"cd packages/backend/services/gateway-service && node dist/app.js\" \"cd packages/backend/services/user-service && node dist/app.js\" \"cd packages/backend/services/websocket-service && node dist/app.js\" \"cd packages/backend/services/workflow-service && node dist/app.js\"",
+    "start:frontend": "npm run dev --workspace=packages/frontend/web-dashboard",
+    "start": "concurrently -n backend,frontend \"npm run start:backend\" \"npm run start:frontend\"",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "eslint": "^8.50.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.0.3"
+  }
+}

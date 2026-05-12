@@ -1,0 +1,1 @@
+export const getSharedConfig = () => ({ message: 'Hello from Shared Service TS!', timestamp: new Date().toISOString() });

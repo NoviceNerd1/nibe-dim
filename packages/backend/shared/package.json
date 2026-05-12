@@ -1,0 +1,14 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "jest --passWithNoTests",
+    "build": "tsc"
+  },
+  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
