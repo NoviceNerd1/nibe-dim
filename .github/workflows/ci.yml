@@ -28,11 +28,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # Build shared library FIRST — all other services depend on its dist/
+      - name: Build shared library
+        run: npm run build --workspace=packages/backend/shared
+
+      # Build all remaining packages (services + frontend)
       - name: Build all packages
-        run: npm run build
+        run: npm run build --workspaces --if-present
 
       - name: Run tests
-        run: npm run test
+        run: npm run test --workspaces --if-present
 
       - name: Run linter
-        run: npm run lint
+        run: npm run lint --workspaces --if-present
