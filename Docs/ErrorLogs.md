@@ -26,3 +26,21 @@
 - Scaffolded `user-service` with full TypeScript structure identical to other services (port 4009).
 - Installed `concurrently` as a root devDependency and rewrote `package.json` scripts: `start:backend` now boots all 10 services simultaneously using `concurrently`. `make local-start` delegates to `npm start`.
 - **Final live verification: 10/10 services returned `{"status":"UP"}` simultaneously.**
+
+## 6. GitHub Actions CI Build Failures — TS2307 + ESLint dist/ (Resolved)
+**Issue 1 — TS2307 `Cannot find module 'shared'`:**
+`gateway-service/src/app.ts` imports from the `shared` workspace package. On a fresh CI checkout, `npm run build --workspaces --if-present` runs alphabetically (`alert → ... → gateway → shared`). This means `gateway-service` compiled *before* `shared` had generated `dist/index.d.ts`, causing TypeScript error TS2307.
+
+**Issue 2 — `paths` + `rootDir` conflict:**
+The initial suggested fix was to add `"paths": { "shared": ["../../shared/src"] }` to the gateway `tsconfig.json`. This caused a secondary error: TS6059 "File is not under rootDir". TypeScript attempted to compile `shared/src/index.ts` as part of gateway's build scope, violating the `rootDir: ./src` boundary. This also caused a compiled `index.js` to be emitted into `packages/backend/shared/src/` instead of `dist/`.
+
+**Issue 3 — ESLint linting `dist/` output:**
+No `.eslintignore` existed in any service, so ESLint scanned compiled `dist/app.js` files and emitted `no-console` warnings, polluting CI lint output.
+
+**Resolution:**
+1. **CI build order fixed** (`.github/workflows/ci.yml`): Added a dedicated `Build shared library` step (`npm run build --workspace=packages/backend/shared`) explicitly before the `Build all packages` step. This guarantees `shared/dist/index.d.ts` exists before any consuming service compiles.
+2. **`gateway-service/tsconfig.json` reverted**: Removed `paths` and kept clean `rootDir: ./src` + `outDir: ./dist`. Build order fix makes `paths` unnecessary.
+3. **`.eslintignore` added to all 11 packages**: Each service and `shared` now has `dist/`, `node_modules/`, `coverage/` excluded from ESLint scanning.
+4. **`/* eslint-disable no-console */`** added to all `src/app.ts` entry files — intentional scaffold logging is suppressed at the source level.
+5. **Full local CI simulation verified clean**: `npm run build --workspace=packages/backend/shared && npm run build --workspaces --if-present` exits with code 0, all 10 services and frontend compile without errors.
+

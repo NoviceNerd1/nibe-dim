@@ -56,14 +56,20 @@ The root `package.json` manages all workspaces:
     "packages/frontend/*"
   ],
   "scripts": {
-    "start": "npm run start --workspaces --if-present",
-    "dev":   "npm run dev   --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
-    "lint":  "npm run lint  --workspaces --if-present",
-    "test":  "npm run test  --workspaces --if-present"
+    "start:backend":  "concurrently ... (all 10 services in parallel)",
+    "start:frontend": "npm run dev --workspace=packages/frontend/web-dashboard",
+    "start":          "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "build":          "npm run build --workspaces --if-present",
+    "lint":           "npm run lint  --workspaces --if-present",
+    "test":           "npm run test  --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.x"
   }
 }
 ```
+
+> **Important build rule:** Always build `shared` before building all packages. `npm run build --workspaces` runs alphabetically — `gateway-service` compiles before `shared` by default, causing TS2307 errors. The CI pipeline handles this automatically (see Part 6).
 
 ### Step 3: Scaffold Each Microservice
 
@@ -72,17 +78,19 @@ Each service has this standard TypeScript structure (LLD §2.2):
 ```
 <service-name>/
 ├── src/
-│   ├── app.ts           ← Express entry point
+│   ├── app.ts           ← Express entry point (with /* eslint-disable no-console */)
 │   ├── controllers/     ← Route/GraphQL handlers
 │   ├── services/        ← Business logic (domain layer)
 │   ├── repositories/    ← Database access only
 │   ├── models/          ← Mongoose/pg models
-│   ├── middleware/      ← Auth, validation, error handling
+│   ├── middleware/       ← Auth, validation, error handling
 │   ├── config/          ← Environment config
 │   └── utils/           ← Helpers (logger, metrics)
 ├── tests/
 │   ├── unit/
 │   └── integration/
+├── .env.example         ← Committed env template
+├── .eslintignore        ← Excludes dist/, node_modules/, coverage/
 ├── tsconfig.json
 ├── Dockerfile
 └── package.json
@@ -418,13 +426,79 @@ cd packages/backend/services/<service>
 npx tsc --noEmit        # check errors without emitting files
 ```
 
-### Shared Module Not Resolving
+### Shared Module Not Resolving (TS2307)
 ```bash
-npm install             # re-run from root to re-link workspaces
+# Ensure shared is built first — this is the most common CI failure cause
+npm run build --workspace=packages/backend/shared
+# Then build all other packages
+npm run build --workspaces --if-present
 ```
+> **Why this happens:** `npm run build --workspaces` runs in alphabetical order. `gateway-service` (g) compiles before `shared` (s) generates its `dist/index.d.ts`. Always build `shared` first.
+>
+> **Do NOT** add `paths` to `tsconfig.json` to work around this — it causes a secondary TS6059 conflict with `rootDir`.
+
+### ESLint Linting Compiled Output
+If ESLint emits warnings from `dist/app.js`:
+- Ensure `.eslintignore` exists in the service directory with `dist/` listed
+- Each service should have: `dist/`, `node_modules/`, `coverage/` in its `.eslintignore`
 
 ### Docker Container Won't Start
 ```bash
 docker-compose logs <service-name>   # view container logs
 docker-compose down && docker-compose up -d   # restart
 ```
+
+---
+
+## Part 6 — GitHub & CI/CD
+
+### CI Pipeline Structure (`.github/workflows/ci.yml`)
+
+The CI runs on every push to `main`, `develop`, `v1_develop` and on every PR targeting `main` or `develop`.
+
+**Critical build order in CI:**
+```yaml
+# Step 1: Build shared library FIRST
+- name: Build shared library
+  run: npm run build --workspace=packages/backend/shared
+
+# Step 2: Build all remaining packages
+- name: Build all packages
+  run: npm run build --workspaces --if-present
+```
+
+This two-step sequence prevents TS2307 errors caused by alphabetical workspace build ordering.
+
+### Adding a New Service That Imports `shared`
+
+If a new service needs to use the `shared` library:
+
+1. Declare it as a workspace dependency in the service's `package.json`:
+   ```json
+   { "dependencies": { "shared": "*" } }
+   ```
+2. Run `npm install` from the root (creates the symlink automatically)
+3. Import normally in TypeScript — no `paths` config needed:
+   ```typescript
+   import { getSharedConfig } from 'shared';
+   ```
+4. The CI will handle build order — no additional workflow changes required
+
+### Environment Variables
+
+Each service has a `.env.example` committed to the repo. To set up locally:
+```bash
+# Copy the example for any service you are working on
+cp packages/backend/services/device-service/.env.example packages/backend/services/device-service/.env
+# Edit .env with your local values
+```
+
+`.env` files are gitignored — never commit them. `.env.example` files are committed and must be kept up to date whenever a new environment variable is added.
+
+### Opening a Pull Request
+
+1. Push your branch to GitHub
+2. Open a PR targeting `develop` (not `main` directly)
+3. The PR template will appear automatically — fill out all sections
+4. CI must pass (green) before merging
+5. Use the issue templates for bugs and feature requests
