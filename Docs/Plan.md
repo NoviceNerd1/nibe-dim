@@ -1,4 +1,4 @@
-create barebones structure, set up whole project, without logic or anything else, following best practices, full backend first ,which can run:
+
 
 ## (MERN Stack + GraphQL + WebSocket + Microservices)
 

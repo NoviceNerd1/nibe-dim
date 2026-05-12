@@ -1,0 +1,86 @@
+# ========================
+# Dependencies
+# ========================
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+
+# ========================
+# Build Outputs
+# ========================
+dist/
+build/
+**/dist/
+**/build/
+out/
+
+# ========================
+# Environment Variables
+# ========================
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# ========================
+# Logs
+# ========================
+*.log
+logs/
+**/logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ========================
+# OS & Editor Files
+# ========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ========================
+# Testing & Coverage
+# ========================
+coverage/
+**/coverage/
+.nyc_output
+*.lcov
+.jest-cache/
+
+# ========================
+# TypeScript
+# ========================
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# ========================
+# Docker
+# ========================
+.docker/
+
+# ========================
+# Misc
+# ========================
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.turbo/
+*.local

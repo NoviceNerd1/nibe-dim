@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
@@ -6,6 +6,18 @@ import './App.css'
 
 function App() {
   const [count, setCount] = useState(0)
+  const [apiStatus, setApiStatus] = useState<string>('Checking backend...')
+
+  useEffect(() => {
+    fetch('http://localhost:4000/health')
+      .then((res) => res.json())
+      .then((data) => {
+        setApiStatus(`Backend is UP! Shared Info: ${data.sharedInfo}`);
+      })
+      .catch((err) => {
+        setApiStatus(`Backend is DOWN! Error: ${err.message}`);
+      });
+  }, [])
 
   return (
     <>
@@ -20,6 +32,9 @@ function App() {
           <p>
             Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
           </p>
+          <div style={{ marginTop: '20px', padding: '10px', background: '#333', borderRadius: '8px', color: '#00ffcc' }}>
+            <strong>{apiStatus}</strong>
+          </div>
         </div>
         <button
           type="button"

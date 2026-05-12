@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, v1_develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      # Build shared library FIRST — all other services depend on its dist/
+      - name: Build shared library
+        run: npm run build --workspace=packages/backend/shared
+
+      # Build all remaining packages (services + frontend)
+      - name: Build all packages
+        run: npm run build --workspaces --if-present
+
+      - name: Run tests
+        run: npm run test --workspaces --if-present
+
+      - name: Run linter
+        run: npm run lint --workspaces --if-present
